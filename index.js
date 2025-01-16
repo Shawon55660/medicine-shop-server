@@ -27,6 +27,8 @@ async function run() {
     //all colection here
     const usersCollection =   client.db('mediStore').collection('users')
     const categoryCollection =   client.db('mediStore').collection('category')
+    const medicinesCollection =   client.db('mediStore').collection('medicines')
+    const advertisementsCollection =   client.db('mediStore').collection('advertisements')
     //jwt related api
     app.post('/jwt',async(req,res)=>{
         const user = req.body;
@@ -96,6 +98,12 @@ async function run() {
     //add category with post api
     app.post('/add-category', async(req,res)=>{
       const categoryInfo = req.body;
+      const filter = {
+        MedicineCategory:categoryInfo.MedicineCategory
+      }
+      const alreadyExiting = await categoryCollection.findOne(filter)
+
+      if(alreadyExiting) return res.send({ message: "Category already exists"})
       const result = await categoryCollection.insertOne(categoryInfo)
       res.send(result)
     })
@@ -104,7 +112,70 @@ async function run() {
       const result = await categoryCollection.find().toArray()
       res.send(result)
     })
+
+    //category delete api
+    app.delete('/category-delete/:id',async(req,res)=>{
+
+      const deleteId = req.params.id;
+      const filter = {_id: new ObjectId(deleteId)}
+      const result = await categoryCollection.deleteOne(filter);
+      res.send(result)
+    })
+    //get category by ID
+    app.get('/category/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const result =await categoryCollection.findOne(filter)
+      res.send(result)
+    })
+    //category updated api
+    app.patch('/update-category/:id',async(req,res)=>{
+      const id = req.params.id;
+      const updateData = req.body
+      const filter  = { _id: new ObjectId(id)}
+      console.log(updateData.MedicineCategory)
+      const updatedData = {
+        $set:
+   {     MedicineCategory: updateData.MedicineCategory,
+    categoryPhoto:updateData.categoryPhoto
+
+   }
+  
+      }
+      const result =  await categoryCollection.updateOne(filter,updatedData)
+      res.send(result)
+    })
     //manage-category API make end
+
+    //manage-medicines API make start
+    //post medicines
+    app.post('/add-medicines', async(req,res)=>{
+      const info = req.body;
+      const result = await medicinesCollection.insertOne(info)
+      res.send(result)
+    })
+
+    //get medicines
+    app.get('/medicines',async(req,res)=>{
+      const result = await medicinesCollection.find().toArray()
+      res.send(result)
+    })
+    //manage-medicines API make end
+    
+    // manage-advertisements API make start
+
+    //post advertisements
+    app.post('/advertisements', async(req,res)=>{
+      const data = req.body;
+      const result = await advertisementsCollection.insertOne(data)
+      res.send(result)
+    })
+    // get advertisement
+    app.get('/advertisements', async(req,res)=>{
+      const result = await advertisementsCollection.find().toArray()
+      res.send(result)
+    })
+    // manage-advertisements API make start
 
     //check email and get role
     app.get('/users/role/:email',verifyToken, async(req,res)=>{
