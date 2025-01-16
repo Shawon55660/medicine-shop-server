@@ -155,9 +155,19 @@ async function run() {
       res.send(result)
     })
 
-    //get medicines
-    app.get('/medicines',async(req,res)=>{
-      const result = await medicinesCollection.find().toArray()
+    //get medicines bt email
+    app.get('/medicines',verifyToken, async(req,res)=>{
+      const sellerEmail = req.query.sellerEmail;
+      const query = {sellerEmail:sellerEmail}
+      const result = await medicinesCollection.find(query).toArray()
+      res.send(result)
+    })
+     //get medicines by category
+     app.get('/category-medicines', async(req,res)=>{
+      const category = req.query.category;
+     
+      const query = {category:category}
+      const result = await medicinesCollection.find(query).toArray()
       res.send(result)
     })
     //manage-medicines API make end
@@ -171,10 +181,35 @@ async function run() {
       res.send(result)
     })
     // get advertisement
-    app.get('/advertisements', async(req,res)=>{
+    app.get('/advertisements',verifyToken, async(req,res)=>{
+      const sellerEmail = req.query.sellerEmail;
+      const query = {sellerEmail:sellerEmail}
+      const result = await advertisementsCollection.find(query).toArray()
+      res.send(result)
+     
+    })
+    app.get('/advertisements-all', verifyToken, async(req,res)=>{
+     
       const result = await advertisementsCollection.find().toArray()
       res.send(result)
+     
     })
+
+ //update role api
+ app.patch('/add-bannar/:id',verifyToken, async(req,res)=>{
+  const id = req.params.id
+ const {status} = req.body
+
+const query = {_id: new ObjectId(id)}
+const update = {
+  $set:{
+    status: status 
+  }
+  
+}
+const result = await advertisementsCollection.updateOne(query,update)
+res.send(result)
+})
     // manage-advertisements API make start
 
     //check email and get role
