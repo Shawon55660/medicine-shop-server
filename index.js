@@ -366,6 +366,34 @@ async function run() {
      const deleteResult = await cartCollection.deleteMany(query)
      res.send({result, deleteResult})
     })
+  //get api payments
+    app.get('/payments',async(req,res)=>{
+      const result  = await paymentsCollection.find().toArray()
+      res.send(result)
+    })
+
+    //patch status payments
+    app.patch('/paymentUpdate/:id',async(req,res)=>{
+      const id = req.params.id
+      const query  = {_id: new ObjectId(id)}
+      const update = {
+        $set:{
+          status:'paid'
+        }
+      }
+      const result = await paymentsCollection.updateOne(query,update)
+      res.send(result)
+    })
+
+    // payment get by buyerEmail
+    app.get('/buyerPayment', async(req,res)=>{
+      const buyerEmail = req.query.buyerEmail;
+      const query = {
+        buyerEmail:buyerEmail
+      }
+      const result = await paymentsCollection.find(query).toArray()
+      res.send(result)
+    })
     //payment api make end here
 
     //check email and get role
