@@ -355,16 +355,17 @@ async function run() {
         //payment collection post api
         app.post('/payment',async(req,res)=>{
           const paymentInfo = req.body
-          const result = await paymentsCollection.insertOne(paymentInfo)
+          const result = await paymentsCollection.insertMany(paymentInfo)
           
-        
+        console.log(paymentInfo)
         const query = {
           _id:{
-            $in:paymentInfo.cartId.map(id=> new ObjectId(id))
+            $in:paymentInfo.map(id=> new ObjectId(id._id))
           }
         }
+        console.log(query)
      const deleteResult = await cartCollection.deleteMany(query)
-     res.send({result, deleteResult})
+     res.send({result,deleteResult})
     })
   //get api payments
     app.get('/payments',async(req,res)=>{
@@ -375,13 +376,15 @@ async function run() {
     //patch status payments
     app.patch('/paymentUpdate/:id',async(req,res)=>{
       const id = req.params.id
-      const query  = {_id: new ObjectId(id)}
+      const query  = {_id: id}
       const update = {
         $set:{
           status:'paid'
         }
       }
+    
       const result = await paymentsCollection.updateOne(query,update)
+      console.log(result)
       res.send(result)
     })
 
@@ -390,6 +393,15 @@ async function run() {
       const buyerEmail = req.query.buyerEmail;
       const query = {
         buyerEmail:buyerEmail
+      }
+      const result = await paymentsCollection.find(query).toArray()
+      res.send(result)
+    })
+     // payment get by sellerEmail
+     app.get('/sellerSelling', async(req,res)=>{
+      const sellerEmail = req.query.sellerEmail;
+      const query = {
+        sellerEmail:sellerEmail
       }
       const result = await paymentsCollection.find(query).toArray()
       res.send(result)
