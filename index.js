@@ -4,6 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 8000;
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 
 //midle ware
 app.use(cors())
@@ -30,6 +31,7 @@ async function run() {
     const medicinesCollection = client.db('mediStore').collection('medicines')
     const advertisementsCollection = client.db('mediStore').collection('advertisements')
     const cartCollection = client.db('mediStore').collection('cart')
+    const paymentsCollection = client.db('mediStore').collection('payments')
     //jwt related api
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -331,6 +333,40 @@ async function run() {
       res.send(result)
     })
     //cart item API make end
+
+    //payment api make start here
+
+    //payment intent api
+    app.post('/create-payment-intent',async(req,res)=>{
+      
+      const {price,cartData} = req.body;
+      // console.log(cartData)
+      const amount = parseInt(price * 100)
+      const paymentIntent =await stripe.paymentIntents.create({
+        
+        amount:amount,
+        currency:'bdt',
+        payment_method_types:['card'],
+       
+       
+      })
+      res.send({clientSecret: paymentIntent.client_secret,cartData:cartData})
+    })
+        //payment collection post api
+        app.post('/payment',async(req,res)=>{
+          const paymentInfo = req.body
+          const result = await paymentsCollection.insertOne(paymentInfo)
+          
+        
+        const query = {
+          _id:{
+            $in:paymentInfo.cartId.map(id=> new ObjectId(id))
+          }
+        }
+     const deleteResult = await cartCollection.deleteMany(query)
+     res.send({result, deleteResult})
+    })
+    //payment api make end here
 
     //check email and get role
     app.get('/users/role/:email', verifyToken, async (req, res) => {
