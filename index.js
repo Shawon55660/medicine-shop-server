@@ -47,17 +47,58 @@ async function run() {
       }
 
       const token = req.headers.authorization.split(' ')[1];
-      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded ) => {
         if (error) {
           return res.status(401).send({ message: 'unauthorized access' })
         }
-        req.decoded = decoded
+        req.decoded  = decoded 
         next()
       })
 
     }
 
+    //verify email API
+    const verifyEmail = async (req,res,next)=>{
+      const email = req.decoded.email;
+      const query = {email: email}
+      const user = await usersCollection.findOne(query)
+      if(!user)   return res.status(403).send({ message: 'forbidden access' });
+
+      next()
+    }
+
+  
+
     //users info API start
+
+    //admin verify
+app.get('/users/admin/:email',verifyToken,async(req,res)=>{
+  const email = req.params.email
+ 
+  if(email !== req.decoded .email) return   res.status(403).send({ message: 'forbidden access' })
+   const  query ={email: email}
+  const user = await usersCollection.findOne(query)
+  let admin =false
+  if(user){
+    admin = user?.role === 'admin'
+  }
+  res.send({admin})
+
+})
+    //seller verify
+    app.get('/users/seller/:email',verifyToken,async(req,res)=>{
+      const email = req.params.email
+     
+      if(email !== req.decoded .email) return   res.status(403).send({ message: 'forbidden access' })
+       const  query ={email: email}
+      const user = await usersCollection.findOne(query)
+      let seller =false
+      if(user){
+        seller = user?.role === 'seller'
+      }
+      res.send({seller})
+    
+    })
     //users post api
     app.post('/users', async (req, res) => {
       const userInfo = req.body;
@@ -75,7 +116,7 @@ async function run() {
 
 
     })
-    app.get('/users', async (req, res) => {
+    app.get('/users',verifyToken,verifyEmail, async (req, res) => {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
@@ -158,13 +199,40 @@ async function run() {
       const result = await medicinesCollection.insertOne(info)
       res.send(result)
     })
+    
     app.get('/medicinesAll', async (req, res) => {
-      const result = await medicinesCollection.find().toArray()
-      res.send(result)
-    })
+      const page = parseInt(req.query.page) || 1; 
+      const limit = parseInt(req.query.limit) || 10; 
+      const startIndex = (page - 1) * limit;
+      const search = req.query.search
 
+     
+      const query = {
+        ItemName:{
+          $regex: search || '',
+          $options: 'i'
+        }
+      }
+      // console.log(query)
+      const total = await medicinesCollection.countDocuments();     
+      const perPageData = await medicinesCollection.find(query).skip(startIndex).limit(limit).toArray();
+
+      res.json({
+         total, 
+        page, 
+        limit, 
+        perPageData})
+       
+      
+    })
+app.get('/discountMedicine',async(req,res)=>{
+
+ 
+  const result = await medicinesCollection.find().toArray()
+  res.send(result)
+})
     //get medicines bt email
-    app.get('/medicines', verifyToken, async (req, res) => {
+    app.get('/medicines', verifyToken,verifyEmail, async (req, res) => {
       const sellerEmail = req.query.sellerEmail;
       const query = { sellerEmail: sellerEmail }
       const result = await medicinesCollection.find(query).toArray()
@@ -197,14 +265,14 @@ async function run() {
       res.send(result)
     })
     // get advertisement
-    app.get('/advertisements', verifyToken, async (req, res) => {
+    app.get('/advertisements', verifyToken,verifyEmail, async (req, res) => {
       const sellerEmail = req.query.sellerEmail;
       const query = { sellerEmail: sellerEmail }
       const result = await advertisementsCollection.find(query).toArray()
       res.send(result)
 
     })
-    app.get('/advertisements-all', verifyToken, async (req, res) => {
+    app.get('/advertisements-all', async (req, res) => {
 
       const result = await advertisementsCollection.find().toArray()
       res.send(result)
@@ -246,7 +314,7 @@ async function run() {
       }
     })
     //cart by email
-    app.get('/cartsOwner', verifyToken, async (req, res) => {
+    app.get('/cartsOwner',verifyToken,verifyEmail, async (req, res) => {
       const userEmail = req.query.userEmail;
       const query = { userEmail: userEmail }
       const result = await cartCollection.find(query).toArray()
@@ -272,7 +340,7 @@ async function run() {
       res.send(result)
     })
     // cartUpdate increase
-    app.patch('/cartUpdateInc/:id', async (req, res) => {
+    app.patch('/cartUpdateInc/:id',verifyToken,verifyEmail, async (req, res) => {
       const id = req.params.id;
      
 
@@ -303,7 +371,7 @@ async function run() {
       res.send(result)
     })
     // cartUpdate decrease
-    app.patch('/cartUpdateDec/:id', async (req, res) => {
+    app.patch('/cartUpdateDec/:id',verifyToken,verifyEmail, async (req, res) => {
       const id = req.params.id;
     
 
@@ -337,7 +405,7 @@ async function run() {
     //payment api make start here
 
     //payment intent api
-    app.post('/create-payment-intent',async(req,res)=>{
+    app.post('/create-payment-intent', verifyToken,verifyEmail, async(req,res)=>{
       
       const {price,cartData} = req.body;
       // console.log(cartData)
@@ -368,7 +436,7 @@ async function run() {
      res.send({result,deleteResult})
     })
   //get api payments
-    app.get('/payments',async(req,res)=>{
+    app.get('/payments',verifyToken,verifyEmail, async(req,res)=>{
       const result  = await paymentsCollection.find().toArray()
       res.send(result)
     })
@@ -389,7 +457,7 @@ async function run() {
     })
 
     // payment get by buyerEmail
-    app.get('/buyerPayment', async(req,res)=>{
+    app.get('/buyerPayment',verifyToken,verifyEmail, async(req,res)=>{
       const buyerEmail = req.query.buyerEmail;
       const query = {
         buyerEmail:buyerEmail
@@ -398,7 +466,7 @@ async function run() {
       res.send(result)
     })
      // payment get by sellerEmail
-     app.get('/sellerSelling', async(req,res)=>{
+     app.get('/sellerSelling', verifyToken,verifyEmail, async(req,res)=>{
       const sellerEmail = req.query.sellerEmail;
       const query = {
         sellerEmail:sellerEmail
