@@ -5,8 +5,20 @@ const jwt = require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 8000;
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
+//mideware
+// const corsOptions = {
+//   origin: [
+//     'http://localhost:5173',
+//     'https://medistore-ddfa1.web.app',
+    
+//   ],
+//   credentials: true,
+//   optionalSuccessStatus: 200
+// }
 
-//midle ware
+
+// // //midle ware
+// app.use(cors(corsOptions));
 app.use(cors())
 app.use(express.json())
 
@@ -116,10 +128,21 @@ app.get('/users/admin/:email',verifyToken,async(req,res)=>{
 
 
     })
-    app.get('/users',verifyToken,verifyEmail, async (req, res) => {
-      const result = await usersCollection.find().toArray()
-      res.send(result)
-    })
+    app.get('/users', verifyToken, verifyEmail, async (req, res) => {
+      const page = parseInt(req.query.page) || 1; 
+      const limit = parseInt(req.query.limit) || 10; 
+      const startIndex = (page - 1) * limit;
+      
+      const total = await usersCollection.countDocuments();     
+      const perPageData = await usersCollection.find().skip(startIndex).limit(limit).toArray();
+    
+      res.json({
+        total, // Total number of users
+        page,  // Current page
+        limit, // Limit per page
+        perPageData, // Users for the current page
+      });
+    });
     //update role api
     app.patch('/updateRole/:id', verifyToken, async (req, res) => {
       const id = req.params.id
@@ -153,10 +176,23 @@ app.get('/users/admin/:email',verifyToken,async(req,res)=>{
     })
     // get category API
     app.get('/category', async (req, res) => {
-      const result = await categoryCollection.find().toArray()
-      res.send(result)
+      const page = parseInt(req.query.page) || 1; 
+      const limit = parseInt(req.query.limit) || 10; 
+      const startIndex = (page - 1) * limit;
+      const total = await categoryCollection.countDocuments();     
+      const perPageData = await categoryCollection.find().skip(startIndex).limit(limit).toArray();
+    
+      res.json({
+        total, // Total number of users
+        page,  // Current page
+        limit, // Limit per page
+        perPageData, // Users for the current page
+      });
     })
-
+app.get('/categoryAll', async(req,res)=>{
+  const result = await categoryCollection.find().toArray()
+  res.send(result)
+})
     //category delete api
     app.delete('/category-delete/:id', async (req, res) => {
 
@@ -436,8 +472,41 @@ app.get('/discountMedicine',async(req,res)=>{
      res.send({result,deleteResult})
     })
   //get api payments
-    app.get('/payments',verifyToken,verifyEmail, async(req,res)=>{
-      const result  = await paymentsCollection.find().toArray()
+  app.get('/payments', verifyToken, verifyEmail, async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const startIndex = (page - 1) * limit;
+  
+    const { startDate, endDate } = req.query;
+  
+    // Check if startDate and endDate are valid
+    const start = (startDate && !isNaN(new Date(startDate)) ? new Date(startDate) : new Date(0)).toISOString(); // Default to 1970
+    const end = (endDate && !isNaN(new Date(endDate)) ? new Date(endDate) : new Date()).toISOString(); // Default to current date
+  
+  
+  
+    const filter = {
+      date: {
+        $gte: start,
+        $lte: end,
+      },
+    };  
+   
+
+      const total = await paymentsCollection.countDocuments(filter);
+    
+      const perPageData = await paymentsCollection.find(filter).skip(startIndex).limit(limit).toArray();
+  
+      res.json({
+        total, 
+        limit, 
+        perPageData, 
+      });
+    
+  });
+  
+    app.get('/paymentsAll',async(req,res)=>{
+      const result = await paymentsCollection.find().toArray()
       res.send(result)
     })
 
@@ -457,10 +526,10 @@ app.get('/discountMedicine',async(req,res)=>{
     })
 
     // payment get by buyerEmail
-    app.get('/buyerPayment',verifyToken,verifyEmail, async(req,res)=>{
+    app.get('/buyerPayment',verifyToken, async(req,res)=>{
       const buyerEmail = req.query.buyerEmail;
       const query = {
-        buyerEmail:buyerEmail
+        BuyerEmail:buyerEmail
       }
       const result = await paymentsCollection.find(query).toArray()
       res.send(result)
