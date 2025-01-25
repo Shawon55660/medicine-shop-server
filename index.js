@@ -69,15 +69,52 @@ async function run() {
 
     }
 
-    //verify email API
-    const verifyEmail = async (req,res,next)=>{
+    //verify Admin API
+    const verifyAdmin = async (req,res,next)=>{
       const email = req.decoded.email;
+      
       const query = {email: email}
+
       const user = await usersCollection.findOne(query)
-      if(!user)   return res.status(403).send({ message: 'forbidden access' });
+      const isAdmin = user?.role === 'admin';
+      
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
 
       next()
     }
+    //verify Seller API
+    const verifySeller = async (req,res,next)=>{
+      const email = req.decoded.email;
+     
+      const query = {email: email}
+
+      const user = await usersCollection.findOne(query)
+      const isSeller = user?.role === 'seller';
+     
+      if (!isSeller) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+
+      next()
+    }
+      //verify Seller API
+      const verifyUser = async (req,res,next)=>{
+        const email = req.decoded.email;
+       
+        const query = {email: email}
+  
+        const user = await usersCollection.findOne(query)
+        const isUser = user?.role === 'user';
+       
+        if (!isUser) {
+          return res.status(403).send({ message: 'forbidden access' });
+        }
+  
+        next()
+      }
+
 
   
 
@@ -128,7 +165,7 @@ app.get('/users/admin/:email',verifyToken,async(req,res)=>{
 
 
     })
-    app.get('/users', verifyToken, verifyEmail, async (req, res) => {
+    app.get('/users', verifyToken, verifyAdmin,async (req, res) => {
       const page = parseInt(req.query.page) || 1; 
       const limit = parseInt(req.query.limit) || 10; 
       const startIndex = (page - 1) * limit;
@@ -144,7 +181,7 @@ app.get('/users/admin/:email',verifyToken,async(req,res)=>{
       });
     });
     //update role api
-    app.patch('/updateRole/:id', verifyToken, async (req, res) => {
+    app.patch('/updateRole/:id', verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id
       const { role } = req.body
 
@@ -163,7 +200,7 @@ app.get('/users/admin/:email',verifyToken,async(req,res)=>{
 
     //manage-category API make start
     //add category with post api
-    app.post('/add-category', async (req, res) => {
+    app.post('/add-category',verifyToken,verifyAdmin, async (req, res) => {
       const categoryInfo = req.body;
       const filter = {
         MedicineCategory: categoryInfo.MedicineCategory
@@ -194,7 +231,7 @@ app.get('/categoryAll', async(req,res)=>{
   res.send(result)
 })
     //category delete api
-    app.delete('/category-delete/:id', async (req, res) => {
+    app.delete('/category-delete/:id',verifyToken,verifyAdmin, async (req, res) => {
 
       const deleteId = req.params.id;
       const filter = { _id: new ObjectId(deleteId) }
@@ -209,7 +246,7 @@ app.get('/categoryAll', async(req,res)=>{
       res.send(result)
     })
     //category updated api
-    app.patch('/update-category/:id', async (req, res) => {
+    app.patch('/update-category/:id',verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const updateData = req.body
       const filter = { _id: new ObjectId(id) }
@@ -268,7 +305,7 @@ app.get('/discountMedicine',async(req,res)=>{
   res.send(result)
 })
     //get medicines bt email
-    app.get('/medicines', verifyToken,verifyEmail, async (req, res) => {
+    app.get('/medicines', verifyToken,verifySeller, async (req, res) => {
       const sellerEmail = req.query.sellerEmail;
       const query = { sellerEmail: sellerEmail }
       const result = await medicinesCollection.find(query).toArray()
@@ -295,13 +332,13 @@ app.get('/discountMedicine',async(req,res)=>{
     // manage-advertisements API make start
 
     //post advertisements
-    app.post('/advertisements', async (req, res) => {
+    app.post('/advertisements',verifyToken,verifySeller, async (req, res) => {
       const data = req.body;
       const result = await advertisementsCollection.insertOne(data)
       res.send(result)
     })
     // get advertisement
-    app.get('/advertisements', verifyToken,verifyEmail, async (req, res) => {
+    app.get('/advertisements', verifyToken, verifySeller, async (req, res) => {
       const sellerEmail = req.query.sellerEmail;
       const query = { sellerEmail: sellerEmail }
       const result = await advertisementsCollection.find(query).toArray()
@@ -316,7 +353,7 @@ app.get('/discountMedicine',async(req,res)=>{
     })
 
     //update role api
-    app.patch('/add-bannar/:id', verifyToken, async (req, res) => {
+    app.patch('/add-bannar/:id', verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id
       const { status } = req.body
 
@@ -350,7 +387,7 @@ app.get('/discountMedicine',async(req,res)=>{
       }
     })
     //cart by email
-    app.get('/cartsOwner',verifyToken,verifyEmail, async (req, res) => {
+    app.get('/cartsOwner',verifyToken, async (req, res) => {
       const userEmail = req.query.userEmail;
       const query = { userEmail: userEmail }
       const result = await cartCollection.find(query).toArray()
@@ -376,7 +413,7 @@ app.get('/discountMedicine',async(req,res)=>{
       res.send(result)
     })
     // cartUpdate increase
-    app.patch('/cartUpdateInc/:id',verifyToken,verifyEmail, async (req, res) => {
+    app.patch('/cartUpdateInc/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
      
 
@@ -407,7 +444,7 @@ app.get('/discountMedicine',async(req,res)=>{
       res.send(result)
     })
     // cartUpdate decrease
-    app.patch('/cartUpdateDec/:id',verifyToken,verifyEmail, async (req, res) => {
+    app.patch('/cartUpdateDec/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
     
 
@@ -441,7 +478,7 @@ app.get('/discountMedicine',async(req,res)=>{
     //payment api make start here
 
     //payment intent api
-    app.post('/create-payment-intent', verifyToken,verifyEmail, async(req,res)=>{
+    app.post('/create-payment-intent', verifyToken, async(req,res)=>{
       
       const {price,cartData} = req.body;
       // console.log(cartData)
@@ -461,18 +498,18 @@ app.get('/discountMedicine',async(req,res)=>{
           const paymentInfo = req.body
           const result = await paymentsCollection.insertMany(paymentInfo)
           
-        console.log(paymentInfo)
+     
         const query = {
           _id:{
             $in:paymentInfo.map(id=> new ObjectId(id._id))
           }
         }
-        console.log(query)
+    
      const deleteResult = await cartCollection.deleteMany(query)
      res.send({result,deleteResult})
     })
   //get api payments
-  app.get('/payments', verifyToken, verifyEmail, async (req, res) => {
+  app.get('/payments', verifyToken, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const startIndex = (page - 1) * limit;
@@ -505,13 +542,13 @@ app.get('/discountMedicine',async(req,res)=>{
     
   });
   
-    app.get('/paymentsAll',async(req,res)=>{
+    app.get('/paymentsAll', verifyToken,verifyAdmin,async(req,res)=>{
       const result = await paymentsCollection.find().toArray()
       res.send(result)
     })
 
     //patch status payments
-    app.patch('/paymentUpdate/:id',async(req,res)=>{
+    app.patch('/paymentUpdate/:id',verifyToken,verifyAdmin,async(req,res)=>{
       const id = req.params.id
       const query  = {_id: id}
       const update = {
@@ -526,7 +563,7 @@ app.get('/discountMedicine',async(req,res)=>{
     })
 
     // payment get by buyerEmail
-    app.get('/buyerPayment',verifyToken, async(req,res)=>{
+    app.get('/buyerPayment', verifyToken,verifyUser, async(req,res)=>{
       const buyerEmail = req.query.buyerEmail;
       const query = {
         BuyerEmail:buyerEmail
@@ -535,7 +572,7 @@ app.get('/discountMedicine',async(req,res)=>{
       res.send(result)
     })
      // payment get by sellerEmail
-     app.get('/sellerSelling', verifyToken,verifyEmail, async(req,res)=>{
+     app.get('/sellerSelling', verifyToken, verifySeller,async(req,res)=>{
       const sellerEmail = req.query.sellerEmail;
       const query = {
         sellerEmail:sellerEmail
