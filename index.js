@@ -6,19 +6,19 @@ const app = express()
 const port = process.env.PORT || 8000;
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 //mideware
-// const corsOptions = {
-//   origin: [
-//     'http://localhost:5173',
-//     'https://medistore-ddfa1.web.app',
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'https://medistore-ddfa1.web.app',
     
-//   ],
-//   credentials: true,
-//   optionalSuccessStatus: 200
-// }
+  ],
+  credentials: true,
+  optionalSuccessStatus: 200
+}
 
 
 // // //midle ware
-// app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(cors())
 app.use(express.json())
 
