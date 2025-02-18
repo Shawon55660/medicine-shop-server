@@ -1,10 +1,12 @@
 require('dotenv').config()
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken')
 const app = express()
 const port = process.env.PORT || 8000;
 const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
+
 //mideware
 const corsOptions = {
   origin: [
@@ -19,7 +21,6 @@ const corsOptions = {
 
 // // //midle ware
 app.use(cors(corsOptions));
-app.use(cors())
 app.use(express.json())
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -40,6 +41,7 @@ async function run() {
     //all colection here
     const usersCollection = client.db('mediStore').collection('users')
     const categoryCollection = client.db('mediStore').collection('category')
+    const reveiwsCollection = client.db('mediStore').collection('reveiws')
     const medicinesCollection = client.db('mediStore').collection('medicines')
     const advertisementsCollection = client.db('mediStore').collection('advertisements')
     const cartCollection = client.db('mediStore').collection('cart')
@@ -475,13 +477,26 @@ app.get('/discountMedicine',async(req,res)=>{
     })
     //cart item API make end
 
+    // reveiws API make start 
+    app.post('/clientReveiws', async(req,res)=>{
+      const reveiwsInfo = req.body;
+      const result = await reveiwsCollection.insertOne(reveiwsInfo)
+      res.send(result)
+
+    })
+    app.get('/clientReveiws-get', async(req,res)=>{
+      const result = await reveiwsCollection.find().toArray()
+      res.send(result)
+    })
+    // reveiws API make end 
+
     //payment api make start here
 
     //payment intent api
     app.post('/create-payment-intent', verifyToken, async(req,res)=>{
       
       const {price,cartData} = req.body;
-      // console.log(cartData)
+      console.log(stripe)
       const amount = parseInt(price * 100)
       const paymentIntent =await stripe.paymentIntents.create({
         
@@ -600,10 +615,6 @@ app.get('/discountMedicine',async(req,res)=>{
 
 
     })
-
-
-
-
 
 
   }
